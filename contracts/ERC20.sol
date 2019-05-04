@@ -25,6 +25,52 @@ contract ERC20 is IERC20 {
 
     uint256 private _totalSupply;
 
+    uint _totalEvents = 0;
+    mapping (uint => Event) private _events;
+
+    address owner;
+
+    struct Event {
+        uint start_time,
+        uint end_time,
+        uint coins_per_engagement,
+        mapping(address => bool) hasClaimed
+    };
+
+    event New_Event(uint indexed eventNumber, uint indexed endTime, uint coinsPerEngagment);
+
+    constructor () {
+        owner = msg.sender;
+    }
+
+    modifier onlyOwner (address caller) {
+        require(caller == owner, "caller is now contract owner");
+        _;
+    }
+
+    /**
+     * @dev Updates the owner of the contract to newOwner if called by current owner.
+     * @param newOwner the address to make the new owner of the contract.
+     */
+    function transferOwnership(address newOwner) public onlyOwner(msg.sender) {
+        owner = newOwner;
+    }
+
+    /**
+     * @dev Creates a new Event.
+     * @param length uint The length that the event is active.
+     * @param coins_per_engagement uint The amount of coins claimed per transaction.
+     * Emits a New_Event event.
+     */
+    function createNewEvent(uint length, uint coins_per_engagement) public onlyOwner(msg.sender) {
+        _events[_totalEvents] = Event({
+            start_time: now,
+            end_time: now + length,
+            coins_per_engagement: coins_per_engagement
+        });
+        emit New_Event(_totalEvents, now + length, coins_per_engagement);
+    }
+
     /**
      * @dev Total number of tokens in existence.
      */
