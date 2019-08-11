@@ -33,6 +33,15 @@ contract PennToken is ERC20 {
       uint maxClaimable;
   }
 
+  event EventCreated (uint indexed EventID, string description);
+  event EventOpen (uint indexed EventID, string description);
+  event EventClosed (uint indexed EventID, string description);
+  event RewardCreated (uint indexed RewardID, uint price, string description);
+  event RewardRedeemable (uint indexed RewardID, uint price, string description);
+  event RewardClosed (uint indexed RewardID, uint price, string description);
+  event RewardClaimed (uint indexed RewardID, uint price, string description, address indexed claimer);
+  event AttendeeSignedIn (uint indexed EventID, address indexed attendee, string description);
+
   modifier onlyOwners (address sender) {
       require(owners[sender], "not owner");
       _;
@@ -47,6 +56,7 @@ contract PennToken is ERC20 {
     require(events[EventID].state == eventState.SIGNIN, "not sign in period");
     attendance[EventID][msg.sender] = true;
     events[EventID].presentMembers.push(msg.sender);
+    emit AttendeeSignedIn(EventID, msg.sender, events[EventID].description);
   }
 
   function createNewEvent (string memory _description, uint _rewardAmount, uint _maxAttendees) public onlyOwners(msg.sender) {
@@ -60,15 +70,17 @@ contract PennToken is ERC20 {
           maxAttendees: _maxAttendees,
           presentMembers: _presentMembers
       });
-
+      emit EventCreated(numEvents, _description);
   }
 
   function openEvent (uint EventID) onlyOwners (msg.sender) public {
       events[EventID].state = eventState.SIGNIN;
+      emit EventOpen (EventID, events[EventID].description);
   }
 
   function closeEvent (uint EventID) onlyOwners (msg.sender) public {
       events[EventID].state = eventState.CLOSED;
+      emit EventClosed (EventID, events[EventID].description);
   }
 
   function rewardAttendees (uint EventID) onlyOwners (msg.sender) public {
@@ -99,16 +111,17 @@ contract PennToken is ERC20 {
           numClaimed: 0,
           maxClaimable: _maxClaimable
       });
-
-
+      emit RewardCreated(numRewards, _price, _description);
   }
 
   function allowRedemption (uint RewardID) onlyOwners(msg.sender) public {
       rewards[RewardID].state = rewardState.REDEEM;
+      emit RewardRedeemable(rewards[RewardID].RewardID, rewards[RewardID].price, rewards[RewardID].description);
   }
 
   function closeRedemption (uint RewardID) onlyOwners(msg.sender) public {
       rewards[RewardID].state = rewardState.CLOSED;
+      emit RewardClosed(rewards[RewardID].RewardID, rewards[RewardID].price, rewards[RewardID].description);
   }
 
   function claimReward (uint RewardID) public {
@@ -118,6 +131,7 @@ contract PennToken is ERC20 {
       _balances[msg.sender].sub(rewards[RewardID].price);
       _totalSupply.sub(rewards[RewardID].price);
       rewards[RewardID].numClaimed.add(1);
+      emit RewardClaimed(rewards[RewardID].RewardID, rewards[RewardID].price, rewards[RewardID].description, msg.sender);
   }
 
   function addOwner (address newOwner) onlyOwners(msg.sender) public {
