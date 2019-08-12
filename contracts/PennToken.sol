@@ -35,6 +35,7 @@ contract PennToken is ERC20 {
   event EventCreated (uint indexed EventID, string description);
   event EventOpen (uint indexed EventID, string description);
   event EventClosed (uint indexed EventID, string description);
+  event TokensMinted (uint indexed EventID, uint amount, address receiver, string description);
   event RewardCreated (uint indexed RewardID, uint price, string description);
   event RewardRedeemable (uint indexed RewardID, uint price, string description);
   event RewardClosed (uint indexed RewardID, uint price, string description);
@@ -59,7 +60,7 @@ contract PennToken is ERC20 {
   }
 
   function createNewEvent (string memory _description, uint _rewardAmount, uint _maxAttendees, uint _EventID) public onlyOwners(msg.sender) {
-      address[] memory _presentMembers = new address[](_maxAttendees);
+      address[] memory _presentMembers;
       events[_EventID] = Event ({
           EventID: _EventID,
           state: eventState.CREATED,
@@ -81,21 +82,19 @@ contract PennToken is ERC20 {
       emit EventClosed (EventID, events[EventID].description);
   }
 
-  function rewardAttendees (uint EventID) onlyOwners (msg.sender) public {
+  function mintTokensForAttendees (uint EventID) onlyOwners (msg.sender) public {
       events[EventID].state = eventState.REWARDED;
-      uint maxAttendees = events[EventID].maxAttendees;
       uint attendanceReward = events[EventID].rewardAmount;
       address[] storage attendees = events[EventID].presentMembers;
+      uint size = attendees.length;
+      string memory description = events[EventID].description;
       uint i = 0;
-      for (i; i < maxAttendees; i++) {
+      for (i; i < size; i++) {
           address attendee = attendees[i];
-          if (attendee == address(0)) {
-              break;
-          } else {
-              _balances[attendee] = _balances[attendee].add(attendanceReward);
-          }
+          _balances[attendee] = _balances[attendee].add(attendanceReward);
+          emit TokensMinted (EventID, attendanceReward, attendee, description);
       }
-      _totalSupply.add((i + 1) * attendanceReward);
+      _totalSupply += (size * attendanceReward);
 
   }
 
@@ -127,7 +126,7 @@ contract PennToken is ERC20 {
       require(balanceOf(msg.sender) >= rewards[RewardID].price, "not enough Penn Tokens");
       require(rewards[RewardID].numClaimed < rewards[RewardID].maxClaimable, "this reward has been claimed too many times");
       _balances[msg.sender].sub(rewards[RewardID].price);
-      _totalSupply.sub(rewards[RewardID].price);
+      _totalSupply -= (rewards[RewardID].price);
       rewards[RewardID].numClaimed.add(1);
       emit RewardClaimed(rewards[RewardID].RewardID, rewards[RewardID].price, rewards[RewardID].description, msg.sender);
   }
@@ -142,7 +141,7 @@ contract PennToken is ERC20 {
 
   function manualReward (address receiver, uint amount) onlyOwners(msg.sender) public {
       _balances[receiver].add(amount);
-      _totalSupply.add(amount);
+      _totalSupply += amount;
   }
 
 
