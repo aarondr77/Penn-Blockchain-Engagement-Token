@@ -12,7 +12,6 @@ contract PennToken is ERC20 {
   mapping (uint => Reward) rewards;
   mapping (address => bool) owners;
 
-  uint numEvents = 0;
   uint numRewards = 0;
 
   struct Event {
@@ -59,18 +58,17 @@ contract PennToken is ERC20 {
     emit AttendeeSignedIn(EventID, msg.sender, events[EventID].description);
   }
 
-  function createNewEvent (string memory _description, uint _rewardAmount, uint _maxAttendees) public onlyOwners(msg.sender) {
-      numEvents ++;
+  function createNewEvent (string memory _description, uint _rewardAmount, uint _maxAttendees, uint _EventID) public onlyOwners(msg.sender) {
       address[] memory _presentMembers = new address[](_maxAttendees);
-      events[numEvents] = Event ({
-          EventID: numEvents,
+      events[_EventID] = Event ({
+          EventID: _EventID,
           state: eventState.CREATED,
           description: _description,
           rewardAmount: _rewardAmount,
           maxAttendees: _maxAttendees,
           presentMembers: _presentMembers
       });
-      emit EventCreated(numEvents, _description);
+      emit EventCreated(_EventID, _description);
   }
 
   function openEvent (uint EventID) onlyOwners (msg.sender) public {
@@ -140,6 +138,11 @@ contract PennToken is ERC20 {
 
   function removeOwner (address owner) onlyOwners(msg.sender) public {
       owners[owner] = false;
+  }
+
+  function manualReward (address receiver, uint amount) onlyOwners(msg.sender) public {
+      _balances[receiver].add(amount);
+      _totalSupply.add(amount);
   }
 
 
