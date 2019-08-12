@@ -5,7 +5,7 @@ import "./ERC20.sol";
 contract PennToken is ERC20 {
 
   enum eventState {CREATED, SIGNIN, CLOSED, REWARDED}
-  enum rewardState {BROWSE, REDEEM, CLOSED}
+  enum rewardState {REDEEM, CLOSED}
 
   mapping (uint => mapping (address => bool)) attendance;
   mapping (uint => Event) events;
@@ -91,7 +91,7 @@ contract PennToken is ERC20 {
       uint i = 0;
       for (i; i < size; i++) {
           address attendee = attendees[i];
-          _balances[attendee] = _balances[attendee].add(attendanceReward);
+          _balances[attendee] = _balances[attendee] += attendanceReward;
           emit TokensMinted (EventID, attendanceReward, attendee, description);
       }
       _totalSupply += (size * attendanceReward);
@@ -102,18 +102,13 @@ contract PennToken is ERC20 {
       numRewards ++;
       rewards[numRewards] = Reward({
           RewardID: numRewards,
-          state: rewardState.BROWSE,
+          state: rewardState.REDEEM,
           description: _description,
           price: _price,
           numClaimed: 0,
           maxClaimable: _maxClaimable
       });
       emit RewardCreated(numRewards, _price, _description);
-  }
-
-  function allowRedemption (uint RewardID) onlyOwners(msg.sender) public {
-      rewards[RewardID].state = rewardState.REDEEM;
-      emit RewardRedeemable(rewards[RewardID].RewardID, rewards[RewardID].price, rewards[RewardID].description);
   }
 
   function closeRedemption (uint RewardID) onlyOwners(msg.sender) public {
@@ -125,9 +120,9 @@ contract PennToken is ERC20 {
       require(rewards[RewardID].state == rewardState.REDEEM, "unable to redeem now");
       require(balanceOf(msg.sender) >= rewards[RewardID].price, "not enough Penn Tokens");
       require(rewards[RewardID].numClaimed < rewards[RewardID].maxClaimable, "this reward has been claimed too many times");
-      _balances[msg.sender].sub(rewards[RewardID].price);
+      _balances[msg.sender] -= (rewards[RewardID].price);
       _totalSupply -= (rewards[RewardID].price);
-      rewards[RewardID].numClaimed.add(1);
+      rewards[RewardID].numClaimed += 1;
       emit RewardClaimed(rewards[RewardID].RewardID, rewards[RewardID].price, rewards[RewardID].description, msg.sender);
   }
 
@@ -140,10 +135,8 @@ contract PennToken is ERC20 {
   }
 
   function manualReward (address receiver, uint amount) onlyOwners(msg.sender) public {
-      _balances[receiver].add(amount);
+      _balances[receiver] += amount;
       _totalSupply += amount;
   }
-
-
 
 }
